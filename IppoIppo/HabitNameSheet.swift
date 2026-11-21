@@ -7,6 +7,7 @@
 
 import SwiftUI
 
+// Вью лист, которое всплывает при зажатии на площади привычки
 struct HabitNameSheet: View {
     
     let header: LocalizedStringKey
@@ -26,7 +27,7 @@ struct HabitNameSheet: View {
         // для панели с заголовками
         NavigationStack {
             Form {
-                TextField("Habit name", text: $inputText)
+                TextField("🧘 Habit name", text: $inputText)
                     .focused($isKeyboardFocused)
                     .onSubmit { save() }
             }

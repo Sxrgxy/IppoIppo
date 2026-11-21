@@ -8,6 +8,8 @@
 import SwiftUI
 import SwiftData
 
+
+// Вью сетки с точками привычек (grid) и с логикой их формирования и закрашивания
 struct HabitGridView: View {
     
     // Fetch the context from the environment
@@ -54,13 +56,25 @@ struct HabitGridView: View {
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)
                             ForEach(week, id: \.self) { day in
+                                
+                                //
+                                let isLogged =  habit.logs.contains(where: {log in log.date == day})
+                                
                                 RoundedRectangle(cornerRadius: 3)
                                 // закрашиваем день если у привычки в логах есть совпадение по дате с датой итерирования
                                     .fill(gridColor(day: day))
+                                    .animation(.snappy, value: isLogged) // анимация закрашивания клетки
+                                    .sensoryFeedback(.impact(weight: .light), trigger: isLogged, condition: { _, _ in day != today }) // вибрация
                                     .frame(width: 12, height: 12)
+                                    .keyframeAnimator(initialValue: 1.0, trigger: isLogged) { content, scale in
+                                        content.scaleEffect(scale)
+                                    } keyframes: { _ in
+                                        CubicKeyframe(1.2, duration: 0.2)
+                                        SpringKeyframe(1.0, duration: 0.4)
+                                    } // анимация клетки
                                     .overlay(
                                         RoundedRectangle(cornerRadius: 4)
-                                            .stroke(todayColor(day: day), lineWidth: 1) // Draws cleanly inside the bounds
+                                            .stroke(todayColor(day: day), lineWidth: 1) //
                                             .padding(-2)
                                     )
                                 // при тапе на RoundedRectangle. Для будуших дней не работает

@@ -12,10 +12,13 @@ struct ContentView: View {
     // для первой привычки при первой загрузке приложения
     @AppStorage("createInitialHabit") private var createInitialHabit = true
     
+    // тема при запуске приложения
+    @AppStorage("isDarkMode") private var isDarkMode: Bool = true
+    
     // 1. Fetch the context from the environment
     @Environment(\.modelContext) private var modelContext
     
-    @Environment(\.scenePhase) private var scenePhase //
+    @Environment(\.scenePhase) private var scenePhase
     
     @State private var today = dateToUTC(date: Date()) // обновлять текущую дату
     
@@ -42,44 +45,60 @@ struct ContentView: View {
                     // чтение сохраненных привычек из бд
                     // видимо через цикл по колонке отображаю
                     List() {
-                        ForEach(habits) { habit in
-                            VStack(spacing: 4) {
-                                HStack {
-                                    // название привычки
-                                    Text(habit.name)
-                                    Spacer()
-                                    // икони добавить/отменить
-                                    Button(action: {
-                                        // функция проверки и добавления/удаления даты в лог
-                                        habit.toggleLog(date: dateToUTC(date:Date()), modelContext: modelContext)
-                                    }) {
-                                        Image(systemName: habit.logs.contains {log in log.date == today} ? "checkmark.circle.fill" : "circle")
-                                            .font(.system(size: 22))
-                                            .frame(width: 33, height: 33)
-                                            .contentShape(Rectangle())
+                        // у section есть заголовок, который мы используем для подписи Сегодня: 4 из 7 привычек
+                        Section {
+                            ForEach(habits) { habit in
+                                
+                                // если в логах у привычке есть отметка за сегодня, то true
+                                let isDoneToday = habit.logs.contains {log in log.date == today}
+                                
+                                VStack(spacing: 4) {
+                                    HStack {
+                                        // название привычки
+                                        Text(habit.name)
+                                        Spacer()
+                                        // икони добавить/отменить
+                                        Button(action: {
+                                            // функция проверки и добавления/удаления даты в лог
+                                            habit.toggleLog(date: dateToUTC(date:Date()), modelContext: modelContext)
+                                        }) {
+                                            Image(systemName: isDoneToday ? "checkmark.circle.fill" : "circle")
+                                                .font(.system(size: 22))
+                                                .frame(width: 33, height: 33)
+                                                .contentShape(Rectangle())
+                                                // анимация смены изображения с плавным заполнением окружности и рисовканием галочки
+                                                //.contentTransition(.symbolEffect(.replace))
+                                                // bounce - подпрыигвает, если отвечаем сегодняший день как выполненный
+                                                .symbolEffect(.bounce, value: isDoneToday )
+                                                // своя вибрация у кнопки
+                                                .sensoryFeedback(.impact(weight: .medium), trigger: isDoneToday)
+                                        }
+                                        .buttonStyle(.borderless) // ограничивает область нажатия со всего list-контейнера привычки до области кнопки
                                     }
-                                    .buttonStyle(.borderless) // хз зачем?
+                                    // сетка с днями
+                                    HabitGridView(habit: habit, today: today)
                                 }
-                                // сетка с днями
-                                HabitGridView(habit: habit, today: today)
+                                .contextMenu { // по зажатию переименовать
+                                    Button("Rename") {
+                                        habitToRename = habit // копируем объект текущей привычки habit
+                                    }
+                                    Button("Delete", role: .destructive) {
+                                        habitToDelete = habit
+                                        isShowingDeleteAlert = true
+                                    }
+                                }
                             }
-                            .contextMenu { // по зажатию переименовать
-                                Button("Rename") {
-                                    habitToRename = habit // копируем объект текущей привычки habit
-                                }
-                                Button("Delete", role: .destructive) {
-                                    habitToDelete = habit
-                                    isShowingDeleteAlert = true
-                                }
-                            }
-                            // вибрация при нажатии
-                            .sensoryFeedback(.selection, trigger: habit.logs.count)
+                        }
+                        // заголовок Section
+                        header: {
+                            Text("Today: \(habits.filter {habit in habit.logs.contains {log in log.date == today}}.count) of \(habits.count)")
+                                .padding(.top, -12)
                         }
                     }
                     .scrollDismissesKeyboard(.interactively) // скрыть клавиатуру
                 }
             }
-            .onAppear { if createInitialHabit == true { createInitialHabit = false;  modelContext.insert(Habit(name: String(localized: "My first habit"), order: 0)) } }
+            .onAppear { if createInitialHabit == true { createInitialHabit = false;  modelContext.insert(Habit(name: String(localized: "🌱 My first habit"), order: 0)) } }
             // Приложение стало активным (например, вернулось из фона): обновляем today, ведь пока оно было свёрнуто, день мог смениться
             .onChange(of: scenePhase) { if scenePhase == .active { today = dateToUTC(date: Date()) }}
             // Система сообщила о смене календарного дня, пока приложение запущено (например, открыто в полночь): обновляем today. Это @State, поэтому экран перерисуется, и обводка с сеткой перейдут на новый день
@@ -98,6 +117,20 @@ struct ContentView: View {
             .navigationTitle("Habits") // задаёт заголовок экрана в навигационной панели, которую даёт NavigationStack. Без стека заголовку негде показаться.
             // добавляет кнопки в эту же панель. Без placement элемент встаёт в стандартное место, справа вверху.
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    
+                    if isDarkMode {
+                        Button("Light Mode", systemImage: "sun.max") {
+                            isDarkMode.toggle()
+                        }
+                    } else {
+                        Button("Dark Mode", systemImage: "moon") {
+                            isDarkMode.toggle()
+                        }
+                    }
+                    
+                    
+                }
                 ToolbarItem {
                     Button("Add", systemImage: "plus") {
                         isShowingAddSheet = true
@@ -121,6 +154,8 @@ struct ContentView: View {
                 HabitNameSheet(header: "Rename", initialName: habit.name, onSave: {  name in habit.name = name })
                     .presentationDetents([.medium])
             }
+            // выбрать тему для всего вью
+            .preferredColorScheme( isDarkMode ? .dark : .light )
         }
     }
 }
