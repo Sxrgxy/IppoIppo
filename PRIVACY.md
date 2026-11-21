@@ -10,4 +10,4 @@ If you use iCloud or device backups, your app data may be included in those back
 
 Deleting the app removes all of its data from your device.
 
-If you have any questions, contact: [[vologzhaninsergey23+ippoippo@gmail.com](mailto:vologzhaninsergey23+ippoippo@gmail.com)]([mailto:vologzhaninsergey23+ippoippo@gmail.com](mailto:vologzhaninsergey23+ippoippo@gmail.com))
+If you have any questions, contact: [vologzhaninsergey23+ippoippo@gmail.com](mailto:vologzhaninsergey23+ippoippo@gmail.com)
